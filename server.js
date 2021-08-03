@@ -1,12 +1,22 @@
 
 const express = require('express');
-const weatherData = require('./data/weather.json');
-require('dotenv').config();
-const cors = require('cors');
 const server = express();
+
+const weatherData = require('./data/weather.json');
+
+require('dotenv').config();
 const PORT = process.env.PORT;
+
+const cors = require('cors');
 server.use(cors());
 
+class Forecast {
+    constructor(value) {
+        this.description = `Low of ${value.low_temp}, high of ${value.high_temp} with ${value.weather.description}`;
+        this.datetime = value.datetime;
+
+    }
+}
 
 server.get('/', (req, res) => {
 
@@ -14,32 +24,28 @@ server.get('/', (req, res) => {
 });
 
 
-server.get('/weatherDate', (req, res) => {
+server.get('/weather', (req, res) => {
 
-    let name = req.query.q;
+    try {
 
-    name = name.charAt(0).toUpperCase() + name.slice(1);
-    let lon = request.query.lon;
-    let lat = request.query.lat;
+        let {searchQuery, lat, lon} = req.query;
 
-    let weatherArr = weatherData.find((element) => name == element.city_name);
-    let dataArray = weatherArr.data.map((element) => {
-        let obj = {};
-        obj.date = element.datetime;
-        obj.description = element.weather.description;
-        return obj;
-    });
+        let cityData = weatherData.find(item =>
+            item.city_name.toLocaleLowerCase() === searchQuery.toLocaleLowerCase() ||
+            (item.lat === lat && item.lon === lon)
+        );
+        let forecastArr = cityData.data.map(element => new Forecast(element));
 
-    res.send(dataArray);
-});
+        res.send(forecastArr);
+    }
 
-
-server.get('*', (req, res) => {
-
-    res.status(500).send('Internal Server Error');
+    catch {
+        res.status(404).send('No Available Data For City');
+    }
 
 });
+
 
 server.listen(PORT, () => {
-    console.log(`PORT = ${PORT}`);
+    console.log(`Listening PORT = ${PORT}`);
 });
