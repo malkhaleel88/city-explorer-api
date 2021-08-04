@@ -57,7 +57,7 @@ server.get('/weather', async(req, res) => {
         };
         let responseWeather = await axios.get(WEATHERBIT_URL, queryParams);
         let dataWeather = responseWeather.data.data.map(item => new Forecast(item));
-        res.send(dataWeather);
+        res.json(dataWeather);
 
 });
 
@@ -69,12 +69,12 @@ server.get('/movies', async(req, res) => {
     let queryParams = {
         params:{
             key: MOVIE_KEY,
-            q: q
+            query: locationName
         }
     };
     let responseMovies = await axios.get(MOVIE_URL, queryParams);
     let dataMovies = responseMovies.data.data.map(item => new Movies(item));
-    res.send(dataMovies);
+    res.json(dataMovies);
 
 });
 
