@@ -3,12 +3,13 @@ const WEATHERBIT_KEY = process.env.WEATHERBIT_API_KEY;
 const WEATHERBIT_URL = process.env.WEATHERBIT_API_URL;
 const axios = require('axios');
 const Forecast = require('../models/Forecast');
+const Cache = require('../helpers/cache.helper');
+let cacheObject = new Cache();
 
-async function getWeather(req, res) {
 
+let weatherBitData = async (lat, lon) => {
 
-    let { lat, lon } = req.query;
-
+    console.log('Getting The Data From WeatherBit API');
     let queryParams = {
         params: {
             key: WEATHERBIT_KEY,
@@ -16,14 +17,50 @@ async function getWeather(req, res) {
             lon: lon
         }
     };
-    axios.get(WEATHERBIT_URL, queryParams).then(arr => {
-        
-        let dataWeather = arr.data.data.map(item => new Forecast(item));
-        res.json(dataWeather);
+    try {
+    let response = await axios.get(WEATHERBIT_URL, queryParams)
+    
+    
 
-    }).catch(err =>
-        res.send(err)
-    );
+        let data = response.data.data.map(item => new Forecast(item));
+
+        cacheObject.forecast.push({
+            "lat": lat,
+            "lon": lon,
+            "data": data
+        });
+
+        return data;
+
+    } catch(err) {
+        res.send(err);
+    
+    }
+}
+
+
+let getWeather = async (req, res) => {
+    let { lat, lon } = req.query;
+
+    if ((Date.now() - cacheObject.timeStamp) > 50000){
+        console.log('Reset Cache');
+        cacheObject = new Cache();
+    }
+
+    if (cacheObject.forecast.length) {
+        let filteredData = cacheObject.forecast.find((location) => {
+            return location.lat === lat && location.lon === lon;
+        });
+        if (filteredData) {
+            console.log('Getting The Data From The Cache');
+            res.json(filteredData.data);
+        }  else {   
+        res.json(await weatherBitData(lat, lon));
+        }
+     } else {
+      res.json(await weatherBitData(lat, lon));
+
+    }
 
 }
 
